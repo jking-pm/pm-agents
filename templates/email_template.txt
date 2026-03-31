@@ -2,15 +2,15 @@ Hi {{ contact.firstname }},
 
 We recently joined the Texas Food & Beverage Association, and I wanted to reach out personally. Dr. Shannon Combest suggested you'd be a great person to connect with.
 
-My name is {{ owner.firstname }} — I'm with ProcessMiner, an Atlanta-based company that works with {{ contact.industry }} manufacturers to reduce waste, improve quality consistency, and take some of the firefighting out of day-to-day operations through real-time AI optimization.
+My name is {{ owner.firstname }} — I'm with ProcessMiner, an Atlanta-based company that helps {{ contact.industry }} plant teams get ahead of problems before they shut down a line or trigger a quality hold.
 ⚙ Agent note: {{ contact.industry }} pulls the HubSpot industry property. Agent should verify this is populated and specific (e.g. "Baked Goods", "Beverage", "Dairy") — replace with a plain noun form if the value is formatted oddly.
 
-I'm genuinely curious what's top of mind for you heading into the rest of the year — whether that's [AGENT: company_specific_challenge] or just a persistent challenge that hasn't had a clean answer yet.
-⚙ Agent note: [AGENT: company_specific_challenge] — Research {{ contact.company }} and replace with a one-phrase operational challenge relevant to their business (e.g. "managing quality variation across your {{ contact.plant_count }} sites" or "dealing with raw material variability"). Keep it specific but not presumptuous. If no data is available, replace with: "something you're actively trying to solve".
+Most of the operators we work with are dealing with something like [AGENT: company_specific_challenge]. Our platform gives plant teams real-time visibility into process conditions so deviations get caught as they happen — not pieced together after the shift.
+⚙ Agent note: [AGENT: company_specific_challenge] — Research {{ contact.company }} and replace with a one-phrase floor-level operational challenge relevant to plant operators (e.g. "unexpected line stoppages during peak production windows", "quality variation that only surfaces at end-of-line inspection", or "manual data collection eating into productive time"). Keep it grounded in what operators actually experience on the floor — not executive metrics. If no data is available, replace with: "unplanned downtime that's hard to get ahead of".
 
-No agenda here — just looking to get to know the people in this industry and learn what's really happening on the plant floor.
+I'd love to hear what a typical shift looks like for your team and whether any of this sounds familiar.
 
-Would you be open to a brief conversation sometime?
+Would you be open to a quick conversation?
 
 Best,
 

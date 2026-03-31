@@ -87,6 +87,11 @@ ROLE_PROFILES = {
         "pain_points": "reacting to problems after the fact, paper-based quality logs, explaining variance to corporate, line imbalances",
         "email_tone": "practical and direct, focus on day-to-day operational relief",
     },
+    "plant operator": {
+        "priorities": "line uptime, process stability, real-time alerts, reducing manual data entry, smooth shift handoffs",
+        "pain_points": "finding out about quality deviations too late, unplanned stoppages disrupting the shift, paper-based logs and manual checks, no early warning before a line goes down",
+        "email_tone": "direct and floor-level, focus on what makes their shift easier — less firefighting, fewer surprises, catch problems before they escalate",
+    },
     "quality manager": {
         "priorities": "SPC and statistical quality control, automated inspection, FSMA compliance, recall prevention, traceability",
         "pain_points": "manual inspection bottlenecks, CAPA cycle times, audit readiness, consumer complaint trends, difficulty tracing ingredient lots",
