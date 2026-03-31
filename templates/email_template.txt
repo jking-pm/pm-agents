@@ -1,0 +1,39 @@
+Subject: {{SUBJECT_LINE}}
+
+Hi {{RECIPIENT_SALUTATION}},
+
+{{OPENING_LINE}}
+
+{{BODY_PARAGRAPH_1}}
+
+{{BODY_PARAGRAPH_2}}
+
+{{CALL_TO_ACTION}}
+
+{{SIGNATURE}}
+
+---
+TEMPLATE USAGE NOTES (delete this section before using):
+
+Replace each {{PLACEHOLDER}} with the variables below. The agent will fill these
+in automatically based on its research. You can also add, remove, or rename
+placeholders to match your own template structure — the agent will adapt.
+
+AVAILABLE PLACEHOLDERS:
+  {{SUBJECT_LINE}}          - Personalized subject line for the recipient's role/company
+  {{RECIPIENT_SALUTATION}}  - Recipient's first name or role title if name unknown
+  {{OPENING_LINE}}          - 1-sentence hook referencing something specific to the company
+  {{BODY_PARAGRAPH_1}}      - Primary pain point identification (2-3 sentences)
+  {{BODY_PARAGRAPH_2}}      - How our AI solutions map to their specific situation (2-3 sentences)
+  {{CALL_TO_ACTION}}        - Low-friction ask (e.g., 15-minute call to share relevant case study)
+  {{SIGNATURE}}             - Your name, title, company, contact info
+
+CUSTOMIZATION TIPS:
+  - Add a {{PS_LINE}} for a P.S. that references a specific company metric or news item
+  - Add {{SOCIAL_PROOF}} for a relevant customer name/stat specific to their segment
+  - Add {{SPECIFIC_METRIC}} to highlight a quantified outcome relevant to their role
+  - You can use HubSpot personalization tokens alongside these placeholders
+
+To use your own template, either:
+  1. Replace this file's content with your template
+  2. Pass --template /path/to/your/template.txt at the command line
