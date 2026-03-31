@@ -23,18 +23,19 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ---------------------------------------------------------------------------
-# Our company's solution context (update as needed)
+# Our company's solution context
 # ---------------------------------------------------------------------------
 COMPANY_CONTEXT = """
-We are an Atlanta-based B2B software company offering AI platform solutions to optimize
-Food & Beverage manufacturing operations.
+Company: ProcessMiner (processminer.com)
+Headquarters: Atlanta, GA
+Focus: AI platform solutions to optimize Food & Beverage manufacturing operations
 
-Our core solutions:
-- AI-powered production scheduling and throughput optimization
-- Automated quality control and defect detection (vision AI + SPC)
+Core solutions:
+- Real-time AI-driven process optimization (reduce waste, improve yield, stabilize quality)
+- Quality consistency monitoring and automated deviation alerts
 - Predictive maintenance to reduce unplanned downtime
-- Real-time OEE (Overall Equipment Effectiveness) monitoring and analytics
-- Demand forecasting and supply chain visibility
+- OEE (Overall Equipment Effectiveness) monitoring and analytics
+- Production scheduling and throughput optimization
 - Ingredient and recipe optimization for yield improvement
 - FDA/FSMA compliance automation and end-to-end traceability
 - Energy and waste reduction analytics
@@ -43,8 +44,9 @@ Our core solutions:
 Differentiators:
 - Purpose-built for food & beverage manufacturing (not generic manufacturing)
 - Integrates with existing MES, ERP, and SCADA systems (SAP, Oracle, Rockwell, etc.)
-- Average customer results: 15-25% OEE improvement, 20-30% reduction in unplanned downtime,
-  8-12% yield increase
+- Takes the "firefighting" out of day-to-day plant operations via real-time AI
+- Average customer results: 15–25% OEE improvement, 20–30% reduction in unplanned downtime,
+  8–12% yield increase
 - Typical deployment: 90 days to production value
 """
 
@@ -265,45 +267,55 @@ def run_agent(
                 break
     profile = ROLE_PROFILES[role_key]
 
-    system_prompt = f"""You are a B2B sales intelligence agent specializing in Food & Beverage manufacturing.
-You work for an Atlanta-based software company. Here is our solution context:
+    system_prompt = f"""You are a B2B sales intelligence agent for ProcessMiner, an Atlanta-based AI manufacturing software company.
 
 {COMPANY_CONTEXT}
 
 YOUR TASK:
-1. Use web_search to research the target company (2–4 searches covering: company overview,
-   recent challenges/news, manufacturing operations, sustainability/ESG initiatives).
-2. Identify the top 2–3 operational or strategic pain points most relevant to the recipient's role.
-3. Map those pain points directly to our specific solutions.
-4. Draft a highly personalized outreach email using the provided template — replacing EVERY
-   placeholder with researched, specific content.
+1. Use web_search to research the target company (2–4 searches: company overview, recent news/challenges,
+   manufacturing operations, sustainability or ESG initiatives).
+2. Identify the most relevant operational challenge for this recipient's role.
+3. Produce the final email by working through the template below.
 
 RECIPIENT ROLE PROFILE ({recipient_role or 'Not specified'}):
 - Strategic priorities: {profile['priorities']}
 - Likely pain points: {profile['pain_points']}
 - Email tone guidance: {profile['email_tone']}
 
-EMAIL TEMPLATE (fill in all placeholders):
+EMAIL TEMPLATE:
 ---
 {template}
 ---
 
-DRAFTING RULES:
-- Replace every {{{{PLACEHOLDER}}}} with specific, researched content.
-- Reference real, specific things about the company (initiatives, acquisitions, products, challenges).
-- Do NOT use generic F&B platitudes — be specific to this company.
-- Connect our solutions to their actual situation, not just the industry broadly.
-- Keep tone professional and consultative — a peer reaching out, not a vendor pitching.
-- Subject line should reference something specific to the company or role.
-- If recipient name is unknown, open with their role title (e.g., "Hi [Name],") as a merge field placeholder.
-- End with a low-friction CTA (15-minute call, not a "demo request").
+TEMPLATE CONVENTIONS — read carefully:
+1. {{ contact.X }} and {{ owner.X }} tokens are HubSpot merge fields. Leave them EXACTLY as written —
+   do NOT replace or modify them. They will be populated by HubSpot at send time.
 
-After the email draft, output a brief JSON block tagged <analysis> with:
+2. [AGENT: some_label] tags are YOUR placeholders to fill in via research.
+   Replace each one with a short, specific phrase based on what you found.
+   Examples of good fills for [AGENT: company_specific_challenge]:
+     - "managing quality variation across your co-manufacturing network"
+     - "dealing with raw material variability in your seasoning lines"
+     - "reducing changeover time as you expand into new SKUs"
+   Keep it to one phrase — concise, specific, not presumptuous.
+
+3. ⚙ Agent note: lines are instructions to you. Use them as guidance, then REMOVE them entirely
+   from the final email. They must not appear in the output sent to the recipient.
+
+DRAFTING RULES:
+- Output the complete email with all [AGENT: ...] tags replaced and all ⚙ Agent note: lines removed.
+- Do not add, remove, or rephrase any other lines — preserve the template's voice and structure exactly.
+- The filled-in phrase must be grounded in your research, not generic industry boilerplate.
+- If research yields no useful company-specific data, use: "something you're actively trying to solve".
+
+After the email, output a JSON block tagged <analysis>:
 {{
-  "primary_needs": ["need1", "need2", "need3"],
-  "solution_alignment": ["our solution X addresses need Y", ...],
-  "industry_segment": "e.g. beverage / dairy / snacks",
-  "confidence": "high | medium | low"
+  "company_specific_challenge": "the exact phrase you inserted",
+  "primary_needs": ["need1", "need2"],
+  "solution_alignment": ["ProcessMiner solution X addresses need Y"],
+  "industry_segment": "e.g. beverage / dairy / snacks / baked goods",
+  "confidence": "high | medium | low",
+  "research_basis": "brief note on what source informed the challenge phrase"
 }}"""
 
     salutation = recipient_name if recipient_name else f"[{recipient_role or 'Name'}]"
@@ -357,13 +369,15 @@ After the email draft, output a brief JSON block tagged <analysis> with:
 
     # Parse embedded analysis block
     analysis = _extract_analysis(final_text)
-    # Strip the <analysis> block from the email draft
-    email_draft = _strip_analysis_block(final_text).strip()
+    # Strip the <analysis> block and any leftover ⚙ Agent note: lines
+    email_draft = _strip_agent_notes(_strip_analysis_block(final_text)).strip()
 
     return {
         "company": company_name,
         "recipient_role": recipient_role,
         "recipient_name": recipient_name,
+        "company_specific_challenge": analysis.get("company_specific_challenge", ""),
+        "research_basis": analysis.get("research_basis", ""),
         "primary_needs": analysis.get("primary_needs", []),
         "solution_alignment": analysis.get("solution_alignment", []),
         "industry_segment": analysis.get("industry_segment", ""),
@@ -394,6 +408,13 @@ def _extract_analysis(text: str) -> dict:
 def _strip_analysis_block(text: str) -> str:
     import re
     return re.sub(r"\s*<analysis>.*?</analysis>", "", text, flags=re.DOTALL)
+
+
+def _strip_agent_notes(text: str) -> str:
+    """Remove any remaining ⚙ Agent note: lines the model may have left in the output."""
+    import re
+    # Matches a line that starts with optional whitespace then the ⚙ marker
+    return re.sub(r"[ \t]*⚙ Agent note:.*\n?", "", text)
 
 
 # ---------------------------------------------------------------------------
@@ -502,8 +523,12 @@ Examples:
         print("=" * 70)
         print(result["email_draft"])
         print("\n" + "=" * 70)
+        if result.get("company_specific_challenge"):
+            print(f"Challenge inserted: \"{result['company_specific_challenge']}\"")
+        if result.get("research_basis"):
+            print(f"Research basis:     {result['research_basis']}")
         if result["primary_needs"]:
-            print("PRIMARY NEEDS IDENTIFIED:")
+            print("\nPRIMARY NEEDS IDENTIFIED:")
             for need in result["primary_needs"]:
                 print(f"  • {need}")
         if result["solution_alignment"]:
