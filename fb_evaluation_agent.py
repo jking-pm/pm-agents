@@ -460,23 +460,133 @@ def run_batch(csv_path: str, output_dir: str, template_path: Optional[str] = Non
 
 
 # ---------------------------------------------------------------------------
+# Output helpers
+# ---------------------------------------------------------------------------
+def _print_email_result(result: dict, verbose_meta: bool = True):
+    """Print a clean, copy-paste-ready email block followed by research notes."""
+    DIVIDER = "─" * 68
+    print()
+    print(DIVIDER)
+    print("  COPY THIS EMAIL")
+    print(DIVIDER)
+    print()
+    print(result["email_draft"])
+    print()
+    print(DIVIDER)
+
+    if not verbose_meta:
+        return
+
+    notes = []
+    if result.get("company_specific_challenge"):
+        notes.append(f"  Challenge inserted : \"{result['company_specific_challenge']}\"")
+    if result.get("research_basis"):
+        notes.append(f"  Research basis     : {result['research_basis']}")
+    if result.get("industry_segment"):
+        notes.append(
+            f"  Segment / confidence: {result['industry_segment']} / {result.get('confidence', 'N/A')}"
+        )
+    if result.get("primary_needs"):
+        needs_str = " | ".join(result["primary_needs"])
+        notes.append(f"  Primary needs      : {needs_str}")
+    notes.append(f"  Research steps     : {result['research_steps']}")
+
+    if notes:
+        print("  RESEARCH NOTES")
+        for line in notes:
+            print(line)
+        print(DIVIDER)
+
+
+# ---------------------------------------------------------------------------
+# Interactive mode
+# ---------------------------------------------------------------------------
+def interactive_mode(template_path: Optional[str] = None, verbose: bool = False):
+    """
+    Conversational loop — enter contact info, get copy-paste-ready email copy.
+    Run with:  python fb_evaluation_agent.py
+    """
+    print()
+    print("╔══════════════════════════════════════════════════════════════════╗")
+    print("║      ProcessMiner  •  F&B Email Agent  •  Interactive Mode      ║")
+    print("╚══════════════════════════════════════════════════════════════════╝")
+    print("  Enter contact info below. Press Enter to skip optional fields.")
+    print("  Type  q  at any prompt to quit.\n")
+
+    while True:
+        # ── Input ──────────────────────────────────────────────────────────
+        company = input("  Company name     : ").strip()
+        if company.lower() in ("q", "quit", "exit"):
+            break
+        if not company:
+            print("  Company name is required.\n")
+            continue
+
+        role_raw = input("  Recipient role   : ").strip()
+        if role_raw.lower() in ("q", "quit", "exit"):
+            break
+        role = role_raw or None
+
+        name_raw = input("  Recipient name   : ").strip()
+        if name_raw.lower() in ("q", "quit", "exit"):
+            break
+        name = name_raw or None
+
+        industry_raw = input("  Industry segment (e.g. Baked Goods, Beverage — optional): ").strip()
+        if industry_raw.lower() in ("q", "quit", "exit"):
+            break
+
+        # Pre-populate the {{ contact.industry }} hint via the role context if provided
+        context_note = f" [industry hint: {industry_raw}]" if industry_raw else ""
+        full_company = company + context_note
+
+        # ── Run ────────────────────────────────────────────────────────────
+        label = company + (f"  •  {role}" if role else "") + (f"  •  {name}" if name else "")
+        print(f"\n  Researching {label} ...\n")
+
+        try:
+            result = run_agent(
+                company_name=full_company,
+                recipient_role=role,
+                recipient_name=name,
+                template_path=template_path,
+                verbose=verbose,
+            )
+            _print_email_result(result, verbose_meta=True)
+        except KeyboardInterrupt:
+            print("\n  (interrupted)")
+        except Exception as exc:
+            print(f"\n  ERROR: {exc}")
+
+        # ── Next? ──────────────────────────────────────────────────────────
+        print()
+        again = input("  Generate another email? [Enter = yes / q = quit]: ").strip()
+        if again.lower() in ("q", "quit", "exit"):
+            break
+        print()
+
+    print("\n  Done. Goodbye!\n")
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 def main():
     parser = argparse.ArgumentParser(
-        description="F&B Company Evaluation Agent — Draft AI-tailored outreach emails",
+        description="ProcessMiner F&B Email Agent — Tailored AI outreach email generator",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  python fb_evaluation_agent.py                          # interactive mode (recommended)
   python fb_evaluation_agent.py "Coca-Cola" --role "VP Operations"
-  python fb_evaluation_agent.py "Kraft Heinz" --role "CTO" --name "Jane Smith" --verbose
-  python fb_evaluation_agent.py "Tyson Foods" --role "Plant Manager" --output tyson.json
+  python fb_evaluation_agent.py "Kraft Heinz" --role "CTO" --name "Jane Smith"
+  python fb_evaluation_agent.py "Tyson Foods" --output tyson.json
   python fb_evaluation_agent.py --batch contacts.csv --output results/
         """,
     )
 
     # Single-company mode
-    parser.add_argument("company", nargs="?", help="Target company name")
+    parser.add_argument("company", nargs="?", help="Target company name (omit for interactive mode)")
     parser.add_argument("--role", "-r", help="Recipient role/title (e.g., 'VP Operations', 'CTO')")
     parser.add_argument("--name", "-n", help="Recipient's full name")
     parser.add_argument("--template", "-t", help="Path to custom email template file")
@@ -485,8 +595,8 @@ Examples:
     parser.add_argument("--batch", help="CSV file path for batch processing")
 
     # Output options
-    parser.add_argument("--output", "-o", help="Save output to file/directory (JSON)")
-    parser.add_argument("--email-only", action="store_true", help="Print only the email draft (no metadata)")
+    parser.add_argument("--output", "-o", help="Save full JSON output to a file")
+    parser.add_argument("--email-only", action="store_true", help="Print only the email (no research notes)")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show agent tool calls as they happen")
 
     args = parser.parse_args()
@@ -494,18 +604,21 @@ Examples:
     if not os.getenv("ANTHROPIC_API_KEY"):
         parser.error("ANTHROPIC_API_KEY environment variable is not set.")
 
-    # Batch mode
+    # ── Batch mode ────────────────────────────────────────────────────────
     if args.batch:
         if not args.output:
             parser.error("--output <directory> is required for --batch mode.")
         run_batch(args.batch, args.output, args.template, args.verbose)
         return
 
-    # Single-company mode
+    # ── Interactive mode (default when no company given) ──────────────────
     if not args.company:
-        parser.error("Provide a company name or use --batch for CSV processing.")
+        interactive_mode(template_path=args.template, verbose=args.verbose)
+        return
 
-    print(f"\nResearching {args.company}..." + (f"  (Role: {args.role})" if args.role else ""))
+    # ── Single-company mode ───────────────────────────────────────────────
+    label = args.company + (f"  (Role: {args.role})" if args.role else "")
+    print(f"\nResearching {label} ...")
 
     result = run_agent(
         company_name=args.company,
@@ -518,28 +631,9 @@ Examples:
     if args.email_only:
         print(result["email_draft"])
     else:
-        print("\n" + "=" * 70)
-        print("DRAFTED EMAIL")
-        print("=" * 70)
-        print(result["email_draft"])
-        print("\n" + "=" * 70)
-        if result.get("company_specific_challenge"):
-            print(f"Challenge inserted: \"{result['company_specific_challenge']}\"")
-        if result.get("research_basis"):
-            print(f"Research basis:     {result['research_basis']}")
-        if result["primary_needs"]:
-            print("\nPRIMARY NEEDS IDENTIFIED:")
-            for need in result["primary_needs"]:
-                print(f"  • {need}")
-        if result["solution_alignment"]:
-            print("\nSOLUTION ALIGNMENT:")
-            for item in result["solution_alignment"]:
-                print(f"  • {item}")
-        if result.get("industry_segment"):
-            print(f"\nSegment: {result['industry_segment']}  |  Confidence: {result.get('confidence', 'N/A')}")
-        print(f"Research steps: {result['research_steps']}")
+        _print_email_result(result, verbose_meta=True)
 
-    if args.output and not args.batch:
+    if args.output:
         out_path = Path(args.output)
         out_path.write_text(json.dumps(result, indent=2))
         print(f"\nFull output saved to: {out_path}")
